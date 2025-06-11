@@ -1,0 +1,42 @@
+{
+  "name": "docgen",
+  "license": "0BSD",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-config": "^0.20.14",
+    "@react-native-community/cli": "^18.0.0",
+    "docxtemplater": "3.61.0",
+    "dom": "0.0.3",
+    "expo": "^53.0.11",
+    "expo-asset": "~11.1.5",
+    "expo-dev-client": "~5.2.0",
+    "expo-file-system": "~18.1.10",
+    "expo-font": "^13.3.1",
+    "expo-sharing": "~13.1.5",
+    "expo-splash-screen": "^0.30.9",
+    "expo-status-bar": "~2.2.3",
+    "jszip": "3.10.1",
+    "metro-config": "^0.82.1",
+    "openai": "4.97.0",
+    "package-json": "^10.0.1",
+    "package.json": "0.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.3",
+    "react-native-web": "^0.20.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "type": "module",
+  "private": true,
+  "author": "",
+  "description": ""
+}
