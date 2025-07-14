@@ -1,7 +1,7 @@
 import { StyleSheet, Text, SafeAreaView, TextInput, Image, Pressable, View, ScrollView} from 'react-native';
-import * as SplashScreen from "expo-splash-screen";
+import SplashScreen from 'expo-app-loading';
 import  { logi, doc }  from './doc';
-import {useCallback, useEffect, useState} from "react";
+import { useState } from "react";
 import * as Font from "expo-font";
 
 const fonts = () => Font.loadAsync({
@@ -18,73 +18,54 @@ const text_color = '#DCD7C9';
 const std_font = 'Comfortaa';
 
 export default function App() {
-    const [appIsReady, setAppIsReady] = useState(false)
+    const [font, setFont] = useState(false)
     const [theme, setTheme] = useState('');
     const [kursant, setKursant] = useState('');
     const [group, setGroup] = useState('');
     const [teacher, setTeacher] = useState('');
     const [pages, setPages] = useState('');
-    useEffect(() => {
-        (async () => {
-            try {
-                await SplashScreen.preventAutoHideAsync();
-                await fonts();
-            }
-            catch {
-                // handle error
-            }
-            finally {
-                setAppIsReady(true);
-            }
-        })();
-    }, []);
-    const onLayout = useCallback(() => {
-        if (appIsReady) {
-            SplashScreen.hideAsync();
-        }
-    }, [appIsReady]);
-    if (!appIsReady) {
-        return null;
-    }
-        return (
-            <SafeAreaView onLayout={onLayout} style={styles.container}>
-                <ScrollView contentContainerStyle={[styles.scrollContainer]}>
-                    <Image style={styles.image} source={require('./assets/AcademyLogo.png')}/>
-                    <Text style={[styles.box, styles.textStyle]}>Генератор Сообщений</Text>
-                    <TextInput style={[styles.box, styles.textInput]} onChangeText={theme => setTheme(theme)}
-                               placeholder='Введите тему сообщения' placeholderTextColor={text_color} multiline/>
-                    <TextInput style={[styles.box, styles.textInput]}
-                               onChangeText={kursant => setKursant(kursant)}
-                               placeholder='Введите вашу фамилию и инициалы' placeholderTextColor={text_color}
-                               multiline/>
-                    <View>
-                        <View style={styles.wrapper}>
-                            <TextInput style={[styles.box, styles.miniInput]}
-                                       onChangeText={group => setGroup(group)}
-                                       placeholder='№ группы' placeholderTextColor={text_color}/>
-                            <TextInput style={[styles.box, styles.miniInput, {width: '50%'}]}
-                                       onChangeText={teacher => setTeacher(teacher)}
-                                       placeholder='Фамилия препода' placeholderTextColor={text_color}/>
-                        </View>
-                        <View style={styles.wrapper}>
-                            <TextInput style={[styles.box, styles.miniInput, {width: '40%'}]}
-                                   onChangeText={pages => setPages(pages)}
-                                   placeholder='Кол. страниц' placeholderTextColor={text_color}/>
-                            <Text style={[styles.box, styles.textStyle, styles.docTypeSwitch]}>Тип документа</Text>
-                        </View>
+
+
+return (
+        <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={[styles.scrollContainer]}>
+                <Image style={styles.image} source={require('./assets/AcademyLogo.png')}/>
+                <Text style={[styles.box, styles.textStyle]}>Генератор Сообщений</Text>
+                <TextInput style={[styles.box, styles.textInput]} onChangeText={theme => setTheme(theme)}
+                            placeholder='Введите тему сообщения' placeholderTextColor={text_color} multiline/>
+                <TextInput style={[styles.box, styles.textInput]}
+                            onChangeText={kursant => setKursant(kursant)}
+                           placeholder='Введите вашу фамилию и инициалы' placeholderTextColor={text_color}
+                           multiline/>
+                <View>
+                    <View style={styles.wrapper}>
+                        <TextInput style={[styles.box, styles.miniInput]}
+                                   onChangeText={group => setGroup(group)}
+                                   placeholder='№ группы' placeholderTextColor={text_color}/>
+                        <TextInput style={[styles.box, styles.miniInput, {width: '50%'}]}
+                                   onChangeText={teacher => setTeacher(teacher)}
+                                   placeholder='Фамилия препода' placeholderTextColor={text_color}/>
                     </View>
-                </ScrollView>
-                <Pressable
-                    onPress={() => {logi(); doc('Доклад', theme, kursant, group, teacher, pages)}}
-                    style={({pressed}) => [
-                        pressed ? {backgroundColor: frame_color} : {backgroundColor: bg_color},
-                        styles.box, styles.button
-                    ]}>
-                    <Text style={[styles.textStyle, {fontSize: 24}]}>Создать</Text>
-                </Pressable>
-            </SafeAreaView>
-        );
-}
+                    <View style={styles.wrapper}>
+                        <TextInput style={[styles.box, styles.miniInput, {width: '40%'}]}
+                            onChangeText={pages => setPages(pages)}
+                               placeholder='Кол. страниц' placeholderTextColor={text_color}/>
+                        <Text style={[styles.box, styles.textStyle, styles.docTypeSwitch]}>Тип документа</Text>
+                    </View>
+                </View>
+            </ScrollView>
+            <Pressable
+                onPress={() => {logi(); doc('Доклад', theme, kursant, group, teacher, pages)}}
+                style={({pressed}) => [
+                    pressed ? {backgroundColor: frame_color} : {backgroundColor: bg_color},
+                    styles.box, styles.button
+                ]}>
+                <Text style={[styles.textStyle, {fontSize: 24}]}>Создать</Text>
+            </Pressable>
+        </SafeAreaView>
+    );
+} 
+
 
 const styles = StyleSheet.create({
     container: {
