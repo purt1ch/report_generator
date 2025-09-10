@@ -1,10 +1,10 @@
-//google api key: AIzaSyCHkCu7GpbI_XRc48wGB5evXKKGQm67tSE
+//google api key
 // https://generativelanguage.googleapis.com/v1beta/openai/
-// https://gemini2-0.andrey-purtov10.workers.dev/
+// https://gemini2-0.andrey-purtov10.workers.dev/ Cloudfare server (might allow working without VPN)
 import OpenAI from 'openai';
 export default async function aireq(prompt) {
   const gemini = new OpenAI({
-    apiKey: 'AIzaSyCHkCu7GpbI_XRc48wGB5evXKKGQm67tSE',
+    apiKey: '',
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
   });
   console.log(prompt);
@@ -21,3 +21,4 @@ export default async function aireq(prompt) {
 };
 // const text = await aireq("Напиши сообщение из 20000+ символов")
 // console.log(text);
+
