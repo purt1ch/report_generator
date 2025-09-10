@@ -1,8 +1,8 @@
-//google api key: AIzaSyCHkCu7GpbI_XRc48wGB5evXKKGQm67tSE
+//google api key:
 import OpenAI from 'openai';
 export default async function aireq(prompt) {
   const gemini = new OpenAI({
-    apiKey: 'AIzaSyCHkCu7GpbI_XRc48wGB5evXKKGQm67tSE',
+    apiKey: '',
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
   });
   console.log(prompt);
@@ -19,3 +19,4 @@ export default async function aireq(prompt) {
 };
 // const text = await aireq("   20000+ ")
 // console.log(text);
+
