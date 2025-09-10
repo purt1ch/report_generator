@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import JSZip from "jszip";
 import { request } from "./request.js";
-import aireq from "./gpt.js";
+import aireq from "./gpt_stable.js";
 import * as data from "./data.json" with { type: "json"};
 
 const teachers = data.default.teachers;
@@ -10,22 +10,24 @@ const docIDs = ['{type}', '{theme}', '{name}', '{group}', '{teacherName}', '{lin
 
 for (let i = 0; i < request.length; i++) {
 	// // Определение типа документа из запроса (доклад или сообщение)
-	let n = 0;
-	let type = "Доклад";
+	let n;
+	let type;
 	if (request[i].length == 4) {
 		n = 1;
 		if (request[i][0] == 1)
 			type = "Сообщение";
 		else type = "Реферат";
+	} else {
+		n = 0;
+		type = "Доклад";
 	};
-
 	let kursant = kursants3471[request[i][2+n]-1];
 	let teacherName = teachers[request[i][1+n]][0];
 	let line1 = teachers[request[i][1+n]][1];
 	let line2 = teachers[request[i][1+n]][2];
 	const group = "3471";
 	let theme = request[i][0+n];
-	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Объём не менее 6 страниц листа А4.`;
+	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страницы листа А4 минимум.`;
 	let text = await aireq(prompt);
 	text = text.replace(/\n/g, '');
 	text = text.replace('```xml', '');

@@ -1,34 +1,11 @@
 {
-  "name": "docgenmobile",
-  "license": "0BSD",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
+  "type": "module",
   "dependencies": {
-    "@expo/config-plugins": "~10.0.0",
-    "@expo/prebuild-config": "~9.0.0",
-    "expo": "~53.0.9",
-    "expo-app-loading": "^1.1.2",
-    "expo-asset": "~11.1.5",
-    "expo-file-system": "^18.1.10",
-    "expo-font": "^13.3.1",
-    "expo-sharing": "^13.1.5",
-    "expo-status-bar": "~2.2.3",
+    "ai": "^4.3.10",
+    "generative": "^1.0.4",
+    "google": "^2.1.0",
     "jszip": "^3.10.1",
-    "openai": "^4.100.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-native": "^0.79.2",
-    "react-native-svg": "^15.11.2",
-    "react-native-web": "^0.20.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.0"
-  },
-  "private": true
+    "openai": "^4.96.2",
+    "package.json": "^2.0.1"
+  }
 }
