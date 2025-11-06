@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "ai": "^4.3.10",
+    "generative": "^1.0.4",
+    "google": "^2.1.0",
+    "jszip": "^3.10.1",
+    "openai": "^4.96.2"
+  }
+}
