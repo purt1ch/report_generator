@@ -1,2 +1,2 @@
-node "./main.js"
+node "./main_test.js"
 PAUSE

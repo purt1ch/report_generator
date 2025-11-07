@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import JSZip from "jszip";
 import { request } from "./request.js";
-import aireq from "./gpt.js";
+import aireq from "./gpt_test.js";
+import {XMLParser} from "fast-xml-parser";
 import * as data from "./data.json" with { type: "json"};
 
 const teachers = data.default.teachers;
@@ -10,25 +11,25 @@ const docIDs = ['{type}', '{theme}', '{name}', '{group}', '{teacherName}', '{lin
 
 for (let i = 0; i < request.length; i++) {
 	// // Определение типа документа из запроса (доклад или сообщение)
-	let n;
-	let type;
+	let n = 0;
+	let type = "Доклад";
 	if (request[i].length == 4) {
 		n = 1;
 		if (request[i][0] == 1)
 			type = "Сообщение";
 		else type = "Реферат";
-	} else {
-		n = 0;
-		type = "Доклад";
 	};
+
+	let IsBroken = false;
 	let kursant = kursants3471[request[i][2+n]-1];
 	let teacherName = teachers[request[i][1+n]][0];
 	let line1 = teachers[request[i][1+n]][1];
 	let line2 = teachers[request[i][1+n]][2];
 	const group = "3471";
 	let theme = request[i][0+n];
-	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страницы листа А4 минимум.`;
+	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страниц листа А4 минимум.`;
 	let text = await aireq(prompt);
+	
 	text = text.replace(/\n/g, '');
 	text = text.replace('```xml', '');
 	text = text.replaceAll('`', '');
@@ -45,12 +46,26 @@ for (let i = 0; i < request.length; i++) {
 		doc = doc.replace(docIDs[j], docParts[j]);
 	};
 
-	await zip.file("word/document.xml", doc);
-	// console.log(await zip.file('word/document.xml').async('text'));
+	try {
+		let parser = new XMLParser();
+    	parser.parse(doc, true);
+	} catch (err) {
+		IsBroken = true;
+    	console.log(` Ошибка: ${err}`);
+    	i--;
+	}
 
-	// // Запись итогового файла--------------------------------------------------------------
-	const outputzip = await zip.generateAsync({type: "base64"});
-	fs.writeFileSync(`./outputdocs/${docParts[1]}.docx`, outputzip, {encoding: 'base64'});
-	console.log(`\nВаш итоговый ${type} (${i+1}): "${docParts[1]}.docx" лежит по данному пути: \n /DocGenPC/outputdocs/${docParts[1]}.docx\n`);
+	if (!IsBroken) {
+		await zip.file("word/document.xml", doc);
+		// console.log(await zip.file('word/document.xml').async('text'));
 
+		// // Запись итогового файла--------------------------------------------------------------
+		const outputzip = await zip.generateAsync({type: "base64"});
+		try {
+			fs.writeFileSync(`./outputdocs/${docParts[1]}.docx`, outputzip, {encoding: 'base64'});
+		} catch (error) {
+			console.log(" Ошибка записи файла...")
+		}
+		console.log(`\nВаш итоговый ${type} (${i+1}): "${docParts[1]}.docx" лежит по данному пути: \n /DocGenPC/outputdocs/${docParts[1]}.docx\n`);
+	}
 }

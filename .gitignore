@@ -3,3 +3,6 @@ node_modules
 *_test.js
 .idea
 *_copy*
+*.docx
+!example.docx
+!input.docx
