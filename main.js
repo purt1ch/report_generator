@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import JSZip from "jszip";
 import { request } from "./request.js";
-import aireq from "./gpt_test.js";
+import aireq from "./gpt.js";
 import {XMLParser} from "fast-xml-parser";
 import * as data from "./data.json" with { type: "json"};
 
