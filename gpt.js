@@ -1,7 +1,9 @@
 import OpenAI from 'openai';
+import { config } from "dotenv";
+
 export default async function aireq(prompt) {
   const gemini = new OpenAI({
-    apiKey: '',
+    apiKey: process.env.GEMINI_API_KEY,
     baseURL: 'https://gemini2-0.andrey-purtov10.workers.dev/'
   });
   console.log(prompt);
