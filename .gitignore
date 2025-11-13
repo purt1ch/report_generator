@@ -7,3 +7,4 @@ node_modules
 !example.docx
 !input.docx
 .env
+request.js
