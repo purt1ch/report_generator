@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { Telegraf, Scenes, session } from "telegraf";
 import { spawn } from "node:child_process";
-import { createReadStream, existsSync, writeFileSync, readFileSync } from "node:fs";
+import { createReadStream, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,13 +17,6 @@ if (!token) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dataPath = new URL("./data.json", import.meta.url);
-const data = JSON.parse(readFileSync(dataPath, "utf-8"));
-
-const teacherNames = Object.keys(data?.teachers ?? {});
-const kursants = Array.isArray(data?.kursants3471) ? data.kursants3471 : [];
-const kursantCount = kursants.length || 0;
-
 const bot = new Telegraf(token);
 
 bot.use(session());
@@ -31,7 +24,16 @@ bot.use(session());
 const generateScene = new Scenes.WizardScene(
 	"generate",
 	async (ctx) => {
-		ctx.wizard.state.data = {};
+		ctx.wizard.state.data = {
+			type: 0,
+			theme: "",
+			teacherName: "",
+			teacherLine1: "",
+			teacherLine2: "",
+			group: "",
+			kursant: ""
+		};
+
 		await ctx.reply(
 			"📝 Начнём создание документа.\n\n" +
 			"Введите тип документа:\n" +
@@ -74,52 +76,66 @@ const generateScene = new Scenes.WizardScene(
 		}
 
 		ctx.wizard.state.data.theme = text;
-
-		await ctx.reply(
-			"👨‍🏫 Введите фамилию преподавателя.\n" +
-			"Доступные варианты: " + teacherNames.join(", ")
-		);
+		await ctx.reply("👨‍🏫 Введите строку 1 о преподавателе (например: \"доцент Маньков А.В.\").");
 		return ctx.wizard.next();
 	},
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
 
 		if (!text) {
-			await ctx.reply("❌ Фамилия не может быть пустой.");
+			await ctx.reply("❌ Эта строка не может быть пустой. Укажите строку 1 информации о преподавателе.");
 			return;
 		}
 
-		if (!teacherNames.includes(text)) {
-			await ctx.reply(
-				`❌ Преподаватель "${text}" не найден. Используйте одну из фамилий: ${teacherNames.join(", ")}`
-			);
-			return;
-		}
-
-		ctx.wizard.state.data.teacher = text;
-
-		const limitMessage = kursantCount
-			? `👤 Введите номер курсанта по списку (1–${kursantCount}).`
-			: "👤 Введите номер курсанта по списку (положительное целое число).";
-
-		await ctx.reply(limitMessage);
+		ctx.wizard.state.data.teacherName = text;
+		await ctx.reply("✍️ Введите строку 2 о преподавателе (например: \"КИН, доцент кафедры ...\").");
 		return ctx.wizard.next();
 	},
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
-		const number = Number(text);
 
-		const isValidNumber = Number.isInteger(number) && number > 0 && (kursantCount ? number <= kursantCount : true);
-
-		if (!isValidNumber) {
-			const hint = kursantCount
-				? `❌ Номер курсанта должен быть целым числом от 1 до ${kursantCount}.`
-				: "❌ Номер курсанта должен быть положительным целым числом.";
-			await ctx.reply(hint);
+		if (!text) {
+			await ctx.reply("❌ Строка 2 не может быть пустой. Пожалуйста, повторите ввод.");
 			return;
 		}
 
-		ctx.wizard.state.data.kursantNumber = number;
+		ctx.wizard.state.data.teacherLine1 = text;
+		await ctx.reply("✍️ Введите строку 3 о преподавателе (например: \"социально-экономических дисциплин\").");
+		return ctx.wizard.next();
+	},
+	async (ctx) => {
+		const text = ctx.message?.text?.trim();
+
+		if (!text) {
+			await ctx.reply("❌ Строка 3 не может быть пустой. Пожалуйста, повторите ввод.");
+			return;
+		}
+
+		ctx.wizard.state.data.teacherLine2 = text;
+		await ctx.reply("👥 Введите номер группы курсанта (например: \"3471\").");
+		return ctx.wizard.next();
+	},
+	async (ctx) => {
+		const text = ctx.message?.text?.trim();
+
+		if (!text) {
+			await ctx.reply("❌ Группа не может быть пустой. Укажите номер группы.");
+			return;
+		}
+
+		ctx.wizard.state.data.group = text;
+		await ctx.reply("👤 Введите фамилию и инициалы курсанта (например: \"Апасов А.А.\").");
+		return ctx.wizard.next();
+	},
+	async (ctx) => {
+		const text = ctx.message?.text?.trim();
+
+		if (!text) {
+			await ctx.reply("❌ Фамилия и инициалы курсанта не могут быть пустыми.");
+			return;
+		}
+
+		ctx.wizard.state.data.kursant = text;
 
 		await ctx.reply("⏳ Генерирую документ, пожалуйста подождите...");
 
@@ -145,6 +161,7 @@ const generateScene = new Scenes.WizardScene(
 			await ctx.reply(`❌ Произошла ошибка: ${message}`);
 		}
 
+		ctx.wizard.state.data = null;
 		return ctx.scene.leave();
 	}
 );
@@ -197,21 +214,30 @@ function escapeForJsLiteral(value) {
 
 async function writeRequestToFile(data) {
 	const requestPath = path.join(__dirname, "request.js");
-	const theme = escapeForJsLiteral(data.theme);
-	const teacher = escapeForJsLiteral(data.teacher);
-	const kursantNumber = data.kursantNumber;
-	const type = data.type ?? 0;
+	const type = Number.isInteger(data?.type) ? data.type : 0;
+	const theme = escapeForJsLiteral(data?.theme ?? "");
+	const teacherName = escapeForJsLiteral(data?.teacherName ?? "");
+	const teacherLine1 = escapeForJsLiteral(data?.teacherLine1 ?? "");
+	const teacherLine2 = escapeForJsLiteral(data?.teacherLine2 ?? "");
+	const group = escapeForJsLiteral(data?.group ?? "");
+	const kursant = escapeForJsLiteral(data?.kursant ?? "");
 
+	if (![theme, teacherName, teacherLine1, teacherLine2, group, kursant].every((value) => value.length > 0)) {
+		throw new Error("Не все данные заполнены. Проверьте тему, блок преподавателя, группу и курсанта.");
+	}
+
+	const baseFields = `"${theme}", "${teacherName}", "${teacherLine1}", "${teacherLine2}", "${group}", "${kursant}"`;
 	const requestArray = type === 0
-		? `[["${theme}", "${teacher}", ${kursantNumber}]]`
-		: `[[${type}, "${theme}", "${teacher}", ${kursantNumber}]]`;
+		? `[[${baseFields}]]`
+		: `[[${type}, ${baseFields}]]`;
 
 	const content = `// Заполнение запроса пошагово:
-// 1) Создать квадратные кавычки с запятой "[]," внутри основных
-// 2) Заполнить в порядке: [(по умолчанию - доклад, 1 - если сообщение, 2 - если реферат),"Название темы", "Фамилия препода", номер курсанта по списку]
-// 3) Повторить предыдущие пункты
-// 
-// Пример: export const request = [["Победа Красной Армии", "Маньков", 1], [1, "Русская Философия", "Жуков", 2]]
+// 1) Каждый элемент массива описывает один документ.
+// 2) Формат элемента без указания типа: ["Тема", "Строка 1 о преподавателе", "Строка 2 о преподавателе", "Строка 3 о преподавателе", "Группа", "Фамилия и инициалы курсанта"].
+// 3) Если требуется сообщение или реферат, добавьте тип первым числом: [1, "Тема", ...] или [2, "Тема", ...].
+// 4) Повторяйте элементы для каждого документа.
+//
+// Пример: export const request = [["Победа Красной Армии", "доцент Маньков А.В.", "КИН, доцент кафедры гуманитарных и", "социально-экономических дисциплин", "3471", "Апасов А.А."], [1, "Русская философия", "полковник Жуков С. А.", "Преподаватель кафедры гуманитарных и", "социально-экономических дисциплин", "3471", "Жуков А.В."]];
 
 
 export const request = ${requestArray}

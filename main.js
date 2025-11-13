@@ -3,31 +3,44 @@ import JSZip from "jszip";
 import { request } from "./request.js";
 import aireq from "./gpt.js";
 import {XMLParser} from "fast-xml-parser";
-import * as data from "./data.json" with { type: "json"};
-
-const teachers = data.default.teachers;
-const kursants3471 = data.default.kursants3471;
 const docIDs = ['{type}', '{theme}', '{name}', '{group}', '{teacherName}', '{line1}', '{line2}', '<w:p><w:pPr><w:pStyle w:val="style0"/><w:jc w:val="both"/><w:spacing w:after="160" w:before="0" w:line="100" w:lineRule="atLeast"/></w:pPr><w:r><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:lang w:val="en-US"/></w:rPr><w:t>{text}</w:t></w:r></w:p>'];
 
 for (let i = 0; i < request.length; i++) {
 	// // Определение типа документа из запроса (доклад или сообщение)
+	if (request[i].length !== 6 && request[i].length !== 7) {
+		console.log(" Ошибка: неверный формат элемента запроса. Ожидаю 6 или 7 значений.");
+		continue;
+	}
+
 	let n = 0;
 	let type = "Доклад";
-	if (request[i].length == 4) {
+	if (request[i].length === 7) {
 		n = 1;
-		if (request[i][0] == 1)
-			type = "Сообщение";
-		else type = "Реферат";
+		const docType = Number(request[i][0]);
+		if (docType === 1) type = "Сообщение";
+		else if (docType === 2) type = "Реферат";
+		else type = "Доклад";
 	};
 
 	let IsBroken = false;
-	let kursant = kursants3471[request[i][2+n]-1];
-	let teacherName = teachers[request[i][1+n]][0];
-	let line1 = teachers[request[i][1+n]][1];
-	let line2 = teachers[request[i][1+n]][2];
-	const group = "3471";
 	let theme = request[i][0+n];
-	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страниц листа А4 минимум.`;
+	let teacherName = request[i][1+n];
+	let line1 = request[i][2+n];
+	let line2 = request[i][3+n];
+	let group = request[i][4+n];
+	let kursant = request[i][5+n];
+	const required = [theme, teacherName, line1, line2, group, kursant];
+	if (required.some((value) => typeof value !== "string" || value.trim().length === 0)) {
+		console.log(" Ошибка: запрос заполнен не полностью. Пропускаю запись...");
+		continue;
+	}
+	theme = theme.trim();
+	teacherName = teacherName.trim();
+	line1 = line1.trim();
+	line2 = line2.trim();
+	group = group.toString().trim();
+	kursant = kursant.trim();
+	let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Нужно сделать 5-6 страниц листа А4 минимум`;
 	let text = await aireq(prompt);
 	
 	text = text.replace(/\n/g, '');
