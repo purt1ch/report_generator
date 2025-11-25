@@ -22,7 +22,12 @@ const data = JSON.parse(readFileSync(dataPath, "utf-8"));
 
 const teacherNames = Object.keys(data?.teachers ?? {});
 
-const bot = new Telegraf(token);
+const bot = new Telegraf(token, {
+	telegram: {
+		apiRoot: "https://api.telegram.org",
+		webhookReply: false
+	}
+});
 
 bot.use(session());
 
@@ -39,6 +44,7 @@ const generateScene = new Scenes.WizardScene(
 		);
 		return ctx.wizard.next();
 	},
+
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
 
@@ -58,6 +64,7 @@ const generateScene = new Scenes.WizardScene(
 		await ctx.reply("📌 Введите название темы (без символов \\ / : * ? \" < > |).");
 		return ctx.wizard.next();
 	},
+
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
 
@@ -80,6 +87,7 @@ const generateScene = new Scenes.WizardScene(
 		);
 		return ctx.wizard.next();
 	},
+
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
 
@@ -100,19 +108,19 @@ const generateScene = new Scenes.WizardScene(
 			// Фамилия найдена в списке - используем режим выбора из списка
 			ctx.wizard.state.data.teacher = foundTeacherName;
 			ctx.wizard.state.data.teacherInputMode = 1;
+			await ctx.reply("👤 Введите ФИО курсанта (например: Петров А.А.):");
 		} else {
 			// Фамилия не найдена - используем режим полного ввода
 			ctx.wizard.state.data.teacherName = text;
 			ctx.wizard.state.data.teacherInputMode = 2;
+			await ctx.reply("📝 Введите первую строку должности/регалий преподавателя:");
 		}
 
-		await ctx.reply("👤 Введите ФИО курсанта (например: Петров А.А.):");
 		return ctx.wizard.next();
 	},
+	
 	async (ctx) => {
-		// Этот шаг обрабатывает два случая:
-		// 1. Для режима выбора из списка - ввод ФИО курсанта (завершение)
-		// 2. Для режима полного ввода - ввод первой строки должности
+		// Ввод ФИО курсанта (для режима выбора из списка) или первой строки должности (для режима полного ввода)
 		const inputMode = ctx.wizard.state.data.teacherInputMode;
 		const text = ctx.message?.text?.trim();
 
@@ -129,7 +137,7 @@ const generateScene = new Scenes.WizardScene(
 
 			try {
 				await writeRequestToFile(ctx.wizard.state.data);
-				await runMainScript();
+				await runMainScriptWithTimeout(300000); // 5 минут timeout
 
 				const theme = ctx.wizard.state.data.theme;
 				const outputPath = path.join(__dirname, "outputdocs", `${theme}.docx`);
@@ -137,45 +145,46 @@ const generateScene = new Scenes.WizardScene(
 				if (!existsSync(outputPath)) {
 					await ctx.reply("❌ Файл не найден. Проверьте логи выполнения.");
 				} else {
-					await ctx.replyWithDocument({
-						source: createReadStream(outputPath),
-						filename: `${theme}.docx`
-					});
+					await sendDocumentWithRetry(ctx, outputPath, `${theme}.docx`);
 					await ctx.reply("✅ Документ создан и отправлен!");
 				}
 			} catch (error) {
 				console.error("Ошибка при генерации документа:", error);
-				const message = error instanceof Error ? error.message : "неизвестная ошибка";
+				let message = "неизвестная ошибка";
+				if (error instanceof Error) {
+					if (error.name === "TimeoutError" || error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
+						message = "Превышено время ожидания. Попробуйте позже или обратитесь к администратору.";
+					} else {
+						message = error.message;
+					}
+				}
 				await ctx.reply(`❌ Произошла ошибка: ${message}`);
 			}
-
+        
 			return ctx.scene.leave();
+		} else {
+			// Режим полного ввода - это должна быть первая строка должности
+			if (!text) {
+				await ctx.reply("❌ Первая строка должности не может быть пустой.");
+				return;
+			}
+			ctx.wizard.state.data.teacherLine1 = text;
+			await ctx.reply("📝 Введите вторую строку должности/регалий преподавателя:");
+			return ctx.wizard.next();
 		}
-
-		// Режим полного ввода - ввод первой строки должности
-		if (!text) {
-			await ctx.reply("❌ Первая строка должности не может быть пустой.");
-			return;
-		}
-
-		ctx.wizard.state.data.teacherLine1 = text;
-		await ctx.reply("📝 Введите вторую строку должности/регалий преподавателя:");
-		return ctx.wizard.next();
 	},
+	
 	async (ctx) => {
-		// Ввод второй строки должности (только для режима полного ввода)
 		const text = ctx.message?.text?.trim();
-
 		if (!text) {
 			await ctx.reply("❌ Вторая строка должности не может быть пустой.");
 			return;
 		}
-
 		ctx.wizard.state.data.teacherLine2 = text;
-
 		await ctx.reply("👤 Введите ФИО курсанта (например: Петров А.А.):");
 		return ctx.wizard.next();
 	},
+
 	async (ctx) => {
 		// Ввод ФИО курсанта (для режима полного ввода)
 		const text = ctx.message?.text?.trim();
@@ -191,7 +200,7 @@ const generateScene = new Scenes.WizardScene(
 
 		try {
 			await writeRequestToFile(ctx.wizard.state.data);
-			await runMainScript();
+			await runMainScriptWithTimeout(300000); // 5 минут timeout
 
 			const theme = ctx.wizard.state.data.theme;
 			const outputPath = path.join(__dirname, "outputdocs", `${theme}.docx`);
@@ -199,15 +208,19 @@ const generateScene = new Scenes.WizardScene(
 			if (!existsSync(outputPath)) {
 				await ctx.reply("❌ Файл не найден. Проверьте логи выполнения.");
 			} else {
-				await ctx.replyWithDocument({
-					source: createReadStream(outputPath),
-					filename: `${theme}.docx`
-				});
+				await sendDocumentWithRetry(ctx, outputPath, `${theme}.docx`);
 				await ctx.reply("✅ Документ создан и отправлен!");
 			}
 		} catch (error) {
 			console.error("Ошибка при генерации документа:", error);
-			const message = error instanceof Error ? error.message : "неизвестная ошибка";
+			let message = "неизвестная ошибка";
+			if (error instanceof Error) {
+				if (error.name === "TimeoutError" || error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
+					message = "Превышено время ожидания. Попробуйте позже или обратитесь к администратору.";
+				} else {
+					message = error.message;
+				}
+			}
 			await ctx.reply(`❌ Произошла ошибка: ${message}`);
 		}
 
@@ -245,6 +258,16 @@ bot.command("cancel", async (ctx) => {
 bot.catch((err, ctx) => {
 	console.error("Unhandled bot error", err);
 	console.log("Context that caused the error:", ctx.update);
+	
+	// Обработка timeout ошибок
+	if (err.message?.includes("timeout") || 
+	    err.message?.includes("ETIMEDOUT") ||
+	    err.code === "ETIMEDOUT") {
+		console.error("Timeout error detected:", err);
+		if (ctx && ctx.reply) {
+			ctx.reply("❌ Произошла ошибка: превышено время ожидания. Попробуйте позже.").catch(console.error);
+		}
+	}
 });
 
 bot.launch().then(() => {
@@ -333,4 +356,103 @@ function runMainScript() {
 	});
 }
 
+function runMainScriptWithTimeout(timeoutMs) {
+	let nodeProcess = null;
+	
+	const scriptPromise = new Promise((resolve, reject) => {
+		const mainPath = path.join(__dirname, "main.js");
+		nodeProcess = spawn("node", [mainPath], {
+			cwd: __dirname,
+			stdio: ["ignore", "pipe", "pipe"]
+		});
+
+		let stdout = "";
+		let stderr = "";
+
+		nodeProcess.stdout.on("data", (chunk) => {
+			const text = chunk.toString();
+			stdout += text;
+			process.stdout.write(text);
+		});
+
+		nodeProcess.stderr.on("data", (chunk) => {
+			const text = chunk.toString();
+			stderr += text;
+			process.stderr.write(text);
+		});
+
+		nodeProcess.on("close", (code) => {
+			if (code === 0) {
+				resolve();
+			} else {
+				const summary = [
+					`main.js завершился с кодом ${code}.`,
+					stderr ? `stderr: ${stderr.trim()}` : null,
+					!stderr && stdout ? `stdout: ${stdout.trim()}` : null
+				].filter(Boolean).join("\n");
+				reject(new Error(summary || `main.js exited with code ${code}`));
+			}
+		});
+
+		nodeProcess.on("error", (error) => {
+			reject(error);
+		});
+	});
+	
+	const timeoutPromise = new Promise((_, reject) => {
+		setTimeout(() => {
+			if (nodeProcess && !nodeProcess.killed) {
+				console.error(`Прерывание процесса main.js из-за timeout (${timeoutMs / 1000} секунд)`);
+				nodeProcess.kill('SIGTERM');
+				// Даем процессу немного времени на корректное завершение
+				setTimeout(() => {
+					if (!nodeProcess.killed) {
+						nodeProcess.kill('SIGKILL');
+					}
+				}, 5000);
+			}
+			reject(new Error(`Timeout: выполнение main.js превысило ${timeoutMs / 1000} секунд`));
+		}, timeoutMs);
+	});
+	
+	return Promise.race([scriptPromise, timeoutPromise]);
+}
+
+async function sendDocumentWithRetry(ctx, filePath, filename, maxRetries = 3) {
+	const timeoutMs = 120000; // 2 минуты timeout для отправки документа
+	let lastError = null;
+	
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			// Обертываем отправку документа в Promise.race с таймаутом
+			await Promise.race([
+				ctx.replyWithDocument({
+					source: createReadStream(filePath),
+					filename: filename
+				}),
+				new Promise((_, reject) => {
+					setTimeout(() => {
+						reject(new Error("ETIMEDOUT: Превышено время ожидания отправки документа"));
+					}, timeoutMs);
+				})
+			]);
+			return; // Успешно отправлено
+		} catch (error) {
+			lastError = error;
+			const isTimeout = error.message?.includes("timeout") || 
+			                 error.message?.includes("ETIMEDOUT") ||
+			                 error.code === "ETIMEDOUT" ||
+			                 error.message?.includes("Превышено время ожидания");
+			
+			if (isTimeout && attempt < maxRetries) {
+				console.log(`Попытка ${attempt} отправки документа не удалась (timeout), повторяю...`);
+				await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Экспоненциальная задержка
+			} else {
+				throw error; // Если не timeout или последняя попытка, пробрасываем ошибку
+			}
+		}
+	}
+	
+	throw lastError;
+}
 
