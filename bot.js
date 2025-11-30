@@ -1,9 +1,9 @@
 import { config } from "dotenv";
 import { Telegraf, Scenes, session } from "telegraf";
-import { spawn } from "node:child_process";
 import { createReadStream, existsSync, writeFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isNumberObject } from "node:util/types";
 
 config();
 
@@ -49,14 +49,14 @@ const generateScene = new Scenes.WizardScene(
 		const text = ctx.message?.text?.trim();
 
 		if (text === undefined) {
-			await ctx.reply("❌ Пожалуйста, отправьте число 0, 1 или 2.");
+			await ctx.reply("❌ Пожалуйста, отправьте число 0, 1 или 2.\n\nПопробуйте снова:");
 			return;
 		}
 
 		const type = text === "" ? 0 : Number(text);
 
 		if (!Number.isInteger(type) || type < 0 || type > 2) {
-			await ctx.reply("❌ Неверный формат. Укажите 0, 1 или 2.");
+			await ctx.reply("❌ Неверный формат. Укажите 0, 1 или 2.\n\nПопробуйте снова:");
 			return;
 		}
 
@@ -69,16 +69,31 @@ const generateScene = new Scenes.WizardScene(
 		const text = ctx.message?.text?.trim();
 
 		if (!text) {
-			await ctx.reply("❌ Название темы не может быть пустым.");
+			await ctx.reply("❌ Название темы не может быть пустым.\n\nПопробуйте снова:");
 			return;
 		}
 
 		if (/[\\/:*?"<>|]/.test(text)) {
-			await ctx.reply("❌ Тема содержит запрещённые символы \\ / : * ? \" < > |. Попробуйте снова.");
+			await ctx.reply("❌ Тема содержит запрещённые символы \\ / : * ? \" < > |.\n\nПопробуйте снова:");
 			return;
 		}
 
 		ctx.wizard.state.data.theme = text;
+		await ctx.reply("🔢 Введите номер группы (например: 3471):");
+		return ctx.wizard.next();
+	},
+
+	async (ctx) => {
+		const text = ctx.message?.text?.trim();
+
+		if (isNaN(text)) {
+			await ctx.reply("❌ Номер группы не может быть пустым.\n\nПопробуйте снова:");
+			return;
+		}
+
+		const group = Number(text);
+
+		ctx.wizard.state.data.group = group;
 
 		await ctx.reply(
 			"👨‍🏫 Введите фамилию преподавателя или полное ФИО.\n" +
@@ -92,7 +107,7 @@ const generateScene = new Scenes.WizardScene(
 		const text = ctx.message?.text?.trim();
 
 		if (!text) {
-			await ctx.reply("❌ Поле не может быть пустым.");
+			await ctx.reply("❌ Поле не может быть пустым.\n\nПопробуйте снова:");
 			return;
 		}
 
@@ -127,7 +142,7 @@ const generateScene = new Scenes.WizardScene(
 		if (inputMode === 1) {
 			// Режим выбора из списка - это должен быть ФИО курсанта
 			if (!text) {
-				await ctx.reply("❌ ФИО курсанта не может быть пустым.");
+				await ctx.reply("❌ ФИО курсанта не может быть пустым.\n\nПопробуйте снова:");
 				return;
 			}
 
@@ -165,7 +180,7 @@ const generateScene = new Scenes.WizardScene(
 		} else {
 			// Режим полного ввода - это должна быть первая строка должности
 			if (!text) {
-				await ctx.reply("❌ Первая строка должности не может быть пустой.");
+				await ctx.reply("❌ Первая строка должности не может быть пустой.\n\nПопробуйте снова:");
 				return;
 			}
 			ctx.wizard.state.data.teacherLine1 = text;
@@ -177,7 +192,7 @@ const generateScene = new Scenes.WizardScene(
 	async (ctx) => {
 		const text = ctx.message?.text?.trim();
 		if (!text) {
-			await ctx.reply("❌ Вторая строка должности не может быть пустой.");
+			await ctx.reply("❌ Вторая строка должности не может быть пустой.\n\nПопробуйте снова:");
 			return;
 		}
 		ctx.wizard.state.data.teacherLine2 = text;
@@ -190,7 +205,7 @@ const generateScene = new Scenes.WizardScene(
 		const text = ctx.message?.text?.trim();
 
 		if (!text) {
-			await ctx.reply("❌ ФИО курсанта не может быть пустым.");
+			await ctx.reply("❌ ФИО курсанта не может быть пустым.\n\nПопробуйте снова:");
 			return;
 		}
 
@@ -288,7 +303,7 @@ async function writeRequestToFile(data) {
 	const requestPath = path.join(__dirname, "request.js");
 	const theme = escapeForJsLiteral(data.theme);
 	const kursantName = escapeForJsLiteral(data.kursantName);
-	const group = 3471; // Группа по умолчанию
+	const group = data.group ?? 3471; // Группа из ввода пользователя или по умолчанию
 	const type = data.type ?? 0;
 	
 	let requestArray;
@@ -314,104 +329,15 @@ async function writeRequestToFile(data) {
 	writeFileSync(requestPath, content, "utf-8");
 }
 
-function runMainScript() {
-	return new Promise((resolve, reject) => {
-		const mainPath = path.join(__dirname, "main.js");
-		const nodeProcess = spawn("node", [mainPath], {
-			cwd: __dirname,
-			stdio: ["ignore", "pipe", "pipe"]
-		});
-
-		let stdout = "";
-		let stderr = "";
-
-		nodeProcess.stdout.on("data", (chunk) => {
-			const text = chunk.toString();
-			stdout += text;
-			process.stdout.write(text);
-		});
-
-		nodeProcess.stderr.on("data", (chunk) => {
-			const text = chunk.toString();
-			stderr += text;
-			process.stderr.write(text);
-		});
-
-		nodeProcess.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				const summary = [
-					`main.js завершился с кодом ${code}.`,
-					stderr ? `stderr: ${stderr.trim()}` : null,
-					!stderr && stdout ? `stdout: ${stdout.trim()}` : null
-				].filter(Boolean).join("\n");
-				reject(new Error(summary || `main.js exited with code ${code}`));
-			}
-		});
-
-		nodeProcess.on("error", (error) => {
-			reject(error);
-		});
-	});
-}
-
-function runMainScriptWithTimeout(timeoutMs) {
-	let nodeProcess = null;
+async function runMainScriptWithTimeout(timeoutMs) {
+	const mainModule = await import("./main.js");
+	const mainGen = mainModule.default;
 	
-	const scriptPromise = new Promise((resolve, reject) => {
-		const mainPath = path.join(__dirname, "main.js");
-		nodeProcess = spawn("node", [mainPath], {
-			cwd: __dirname,
-			stdio: ["ignore", "pipe", "pipe"]
-		});
-
-		let stdout = "";
-		let stderr = "";
-
-		nodeProcess.stdout.on("data", (chunk) => {
-			const text = chunk.toString();
-			stdout += text;
-			process.stdout.write(text);
-		});
-
-		nodeProcess.stderr.on("data", (chunk) => {
-			const text = chunk.toString();
-			stderr += text;
-			process.stderr.write(text);
-		});
-
-		nodeProcess.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				const summary = [
-					`main.js завершился с кодом ${code}.`,
-					stderr ? `stderr: ${stderr.trim()}` : null,
-					!stderr && stdout ? `stdout: ${stdout.trim()}` : null
-				].filter(Boolean).join("\n");
-				reject(new Error(summary || `main.js exited with code ${code}`));
-			}
-		});
-
-		nodeProcess.on("error", (error) => {
-			reject(error);
-		});
-	});
+	const scriptPromise = mainGen();
 	
 	const timeoutPromise = new Promise((_, reject) => {
 		setTimeout(() => {
-			if (nodeProcess && !nodeProcess.killed) {
-				console.error(`Прерывание процесса main.js из-за timeout (${timeoutMs / 1000} секунд)`);
-				nodeProcess.kill('SIGTERM');
-				// Даем процессу немного времени на корректное завершение
-				setTimeout(() => {
-					if (!nodeProcess.killed) {
-						nodeProcess.kill('SIGKILL');
-					}
-				}, 5000);
-			}
-			reject(new Error(`Timeout: выполнение main.js превысило ${timeoutMs / 1000} секунд`));
+			reject(new Error(`Timeout: выполнение mainGen превысило ${timeoutMs / 1000} секунд`));
 		}, timeoutMs);
 	});
 	
