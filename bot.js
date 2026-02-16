@@ -341,7 +341,7 @@ const generateScene = new Scenes.WizardScene(
       await runMainScriptWithTimeout(300000); // 5 минут timeout
 
       const theme = ctx.wizard.state.data.theme;
-      const outputPath = path.join(__dirname, "outputdocs", `${theme}.docx`);
+      const outputPath = path.join(__dirname, "outputdocs/", `${theme}.docx`);
 
       if (!existsSync(outputPath)) {
         await ctx.reply("❌ Файл не найден. Проверьте логи выполнения.");
@@ -473,32 +473,22 @@ async function writeRequestToFile(data) {
 }
 
 async function runMainScriptWithTimeout(timeoutMs) {
-  // Import the module as a promise — for modules that perform work at top-level (with top-level await),
-  // the import promise will resolve only after that work completes.
-  const importPromise = import("./main.js");
+  const mainModule = await import("./main.js");
+  const mainGen = mainModule.default;
+
+  const scriptPromise = mainGen();
 
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
       reject(
         new Error(
-          `Timeout: выполнение main.js превысило ${timeoutMs / 1000} секунд`,
+          `Timeout: выполнение mainGen превысило ${timeoutMs / 1000} секунд`,
         ),
       );
     }, timeoutMs);
   });
 
-  // Wait for either the import to finish or the timeout
-  const module = await Promise.race([importPromise, timeoutPromise]);
-
-  // If the imported module exports a function to run (default or named), call it.
-  // Otherwise, assume the module performed its work during import and resolve.
-  if (module && typeof module.default === "function") {
-    return module.default();
-  } else if (module && typeof module.main === "function") {
-    return module.main();
-  } else {
-    return Promise.resolve();
-  }
+  return Promise.race([scriptPromise, timeoutPromise]);
 }
 
 async function sendDocumentWithRetry(ctx, filePath, filename, maxRetries = 3) {
