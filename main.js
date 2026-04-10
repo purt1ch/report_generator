@@ -1,10 +1,32 @@
 import * as fs from "node:fs";
 import JSZip from "jszip";
-import { request } from "./request.js";
 import aireq from "./gpt.js";
 import { XMLParser } from "fast-xml-parser";
 import * as data from "./data.json" with { type: "json" };
+
+function loadRequest() {
+  const requestPath = new URL("./request.js", import.meta.url);
+  const fd = fs.openSync(requestPath, "r");
+
+  try {
+    const size = fs.fstatSync(fd).size;
+    const buffer = Buffer.alloc(size);
+    fs.readSync(fd, buffer, 0, size, 0);
+
+    const source = buffer.toString("utf8");
+    const match = source.match(/export\s+const\s+request\s*=\s*([\s\S]*?);?\s*$/);
+    if (!match) {
+      throw new Error("Не удалось прочитать массив request из request.js");
+    }
+
+    return Function(`"use strict"; return (${match[1]});`)();
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 export default async function mainGen() {
+  const request = loadRequest();
   const teachers = data.default.teachers;
   const docIDs = [
     "{type}",
