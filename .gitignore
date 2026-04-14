@@ -5,4 +5,4 @@ node_modules
 *_copy*
 *.docx
 !example.docx
-!input.docx
+!input.docx.env

@@ -10,6 +10,7 @@ const kursants3471 = data.default.kursants3471;
 const docIDs = ['{type}', '{theme}', '{name}', '{group}', '{teacherName}', '{line1}', '{line2}', '<w:p><w:pPr><w:pStyle w:val="style0"/><w:jc w:val="both"/><w:spacing w:after="160" w:before="0" w:line="100" w:lineRule="atLeast"/></w:pPr><w:r><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:lang w:val="en-US"/></w:rPr><w:t>{text}</w:t></w:r></w:p>'];
 
 for (let i = 0; i < request.length; i++) {
+    console.log(i)
 	// // Определение типа документа из запроса (доклад или сообщение)
 	let n = 0;
 	let type = "Доклад";
@@ -52,7 +53,7 @@ for (let i = 0; i < request.length; i++) {
 	} catch (err) {
 		IsBroken = true;
     	console.log(` Ошибка: ${err}`);
-    	i--;
+    	    i--;
 	}
 
 	if (!IsBroken) {
