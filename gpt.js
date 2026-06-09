@@ -7,13 +7,13 @@ config(); // Load environment variables from .env file
 
 export default async function aireq(prompt) {
   const gemini = new OpenAI({
-    apiKey: process.env.YANDEX_API_KEY,
-    baseURL: "",
+    apiKey: process.env.GEMINI_API_KEY2,
+    baseURL: "https://gemini2-0.andrey-purtov10.workers.dev/",
   });
 
   console.log(prompt);
   const response = await gemini.chat.completions.create({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite",
     messages: [
       {
         role: "system",
