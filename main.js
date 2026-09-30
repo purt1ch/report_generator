@@ -60,9 +60,10 @@ for (let i = 0; i < request.length; i++) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
-  let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страниц листа А4 минимум.`;
+  // DEBUG
+  // let prompt = `Напиши сообщение на тему "${theme}". Текст должен состоять из содержания, введения, основной части, заключения и списка литературы. Должны быть разрывы страниц между введением, основной частью, заключением и списком литературы. Уложись в 4 страниц листа А4 минимум.`;
   let text = await aireq(prompt);
-
+  let text = '<w:p><w:pPr><w:pStyle w:val="style0"/><w:jc w:val="both"/><w:spacing w:after="160" w:before="0" w:line="100" w:lineRule="atLeast"/></w:pPr><w:r><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:lang w:val="en-US"/></w:rPr><w:t>Some Shit</w:t></w:r></w:p>';
   text = text.replace(/\n/g, "");
   text = text.replace("```xml", "");
   text = text.replaceAll("`", "");
