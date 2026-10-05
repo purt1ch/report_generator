@@ -1,7 +1,7 @@
-<h1 align="center">Генератор докладов и сообщений для курсантов</h1>
+<h1 align="center">Генератор научно-исследовательской документации</h1>
 <h2 align="center">Доброго времени суток...
 <img src="https://github.com/blackcater/blackcater/raw/main/images/Hi.gif" height="32"/></h2>
-<h3 align="center"> Здесь возможно размещено спасение для многих курсантов
+
 <h2 align="center"><img src="https://static.tildacdn.com/tild6133-6539-4462-b334-633666643630/002_-_____.svg" height="300"/></h2>
 
 ## Оглавление

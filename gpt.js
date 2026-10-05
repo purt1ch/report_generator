@@ -13,7 +13,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export default async function aireq(prompt) {
   const gemini = new OpenAI({
-    apiKey: process.env.GEMINI_API_KEY2,
+    apiKey: "ВашAPIКлюч",
     baseURL:
       process.env.GEMINI_BASE_URL ||
       "https://generativelanguage.googleapis.com/v1beta/openai/",
